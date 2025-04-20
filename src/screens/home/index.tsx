@@ -11,8 +11,8 @@ interface Response {
   assign: boolean;
 }
 
-interface GenerateResponse {
-  expr: string;
+interface GenerateResult {
+  expression: string;
   answer: string;
 }
 
@@ -21,7 +21,7 @@ export default function Home() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState("rgb(255, 255, 255)");
   const [reset, setReset] = useState(false);
-  const [result, setResult] = useState<GenerateResponse>();
+  const [result, setResult] = useState<GenerateResult>();
   const [dictOfVars, setDictOfVars] = useState({});
 
   useEffect(() => {
@@ -38,8 +38,8 @@ export default function Home() {
       if (ctx) {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight - canvas.offsetTop;
-        ctx.lineCap = "round";
-        ctx.lineWidth = 3;
+        ctx.lineCap = "round"; // brush type
+        ctx.lineWidth = 3; // brush size
       }
     }
   }, []);
@@ -47,8 +47,12 @@ export default function Home() {
   const sendData = async () => {
     const canvas = canvasRef.current;
     if (canvas) {
+      // console.log(
+      //   "sending data ...",
+      //   `${import.meta.env.VITE_API_URL}/calculate`
+      // );
       const response = await axios({
-        method: "POST",
+        method: "post",
         url: `${import.meta.env.VITE_API_URL}/calculate`,
         data: {
           image: canvas.toDataURL("image/png"),
@@ -56,7 +60,7 @@ export default function Home() {
         },
       });
       const resp = await response.data;
-      console.log("response:", resp);
+      console.log("Response:", resp);
     }
   };
 
