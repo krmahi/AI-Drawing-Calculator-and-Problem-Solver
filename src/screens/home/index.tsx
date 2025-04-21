@@ -1,10 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ColorSwatch, Group } from "@mantine/core";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
 import Draggable from "react-draggable";
 import axios from "axios";
-
 import { SWATCHES } from "@/../constants";
+import { Toolbar } from "@/components/ui/Toolbar";
 
 interface Response {
   expr: string;
@@ -21,11 +19,15 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState("rgb(255, 255, 255)");
+  const [brushSize, setBrushSize] = useState(3);
+  const [isErasing, setIsErasing] = useState(false);
   const [reset, setReset] = useState(false);
   const [result, setResult] = useState<GenerateResult>();
   const [latexExpression, setLatexExpression] = useState<Array<string>>([]);
   const [latexPosition, setLatexPosition] = useState({ x: 10, y: 200 });
   const [dictOfVars, setDictOfVars] = useState({});
+  const [history, setHistory] = useState<ImageData[]>([]);
+  const [redoStack, setRedoStack] = useState<ImageData[]>([]);
 
   useEffect(() => {
     if (reset) {
@@ -47,20 +49,19 @@ export default function Home() {
 
   useEffect(() => {
     if (result) {
-      renderLatexToCavas(result.expression, result.answer);
+      renderLatexToCanvas(result.expression, result.answer);
     }
   }, [result]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - canvas.offsetTop;
-        ctx.lineCap = "round"; // brush type
-        ctx.lineWidth = 3; // brush size
-      }
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight - canvas.offsetTop;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
     }
 
     const script = document.createElement("script");
@@ -85,7 +86,124 @@ export default function Home() {
     };
   }, []);
 
-  const renderLatexToCavas = (expression: string, answer: string) => {
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const getCanvasPos = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        pressure: e.pressure || 1,
+      };
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const { x, y, pressure } = getCanvasPos(e);
+
+      // Capture initial snapshot for undo
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (ctx) {
+          const snap = ctx.getImageData(
+            0,
+            0,
+            canvasRef.current.width,
+            canvasRef.current.height
+          );
+          setHistory((prev) => [...prev, snap]);
+          if (redoStack.length > 0) {
+            // User starts drawing again, clear redo (new branch)
+            setRedoStack([]);
+          }
+        }
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineWidth = brushSize * pressure;
+      setIsDrawing(true);
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!isDrawing) return;
+      const { x, y, pressure } = getCanvasPos(e);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = isErasing ? "black" : color;
+      ctx.lineWidth = brushSize * pressure;
+      ctx.stroke();
+    };
+
+    const handlePointerUp = () => {
+      setIsDrawing(false);
+    };
+
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("pointerleave", handlePointerUp);
+
+    return () => {
+      canvas.removeEventListener("pointerdown", handlePointerDown);
+      canvas.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerup", handlePointerUp);
+      canvas.removeEventListener("pointerleave", handlePointerUp);
+    };
+  }, [color, isDrawing, brushSize, isErasing]);
+
+  const resetCanvas = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setHistory([]);
+        if (redoStack.length > 0) {
+          // User starts drawing again, clear redo (new branch)
+          setRedoStack([]);
+        }
+      }
+    }
+  };
+
+  const undo = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || history.length === 0) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const newHistory = [...history];
+    const last = newHistory.pop();
+    if (!last) return;
+    setHistory(newHistory);
+    setRedoStack((prev) => [
+      ctx.getImageData(0, 0, canvas.width, canvas.height),
+      ...prev,
+    ]);
+    ctx.putImageData(last, 0, 0);
+  };
+
+  const redo = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || redoStack.length === 0) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const [restored, ...rest] = redoStack;
+    if (!restored) return;
+
+    // Push current state to history before replacing
+    const current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    setHistory((prev) => [...prev, current]);
+    setRedoStack(rest);
+
+    ctx.putImageData(restored, 0, 0);
+  };
+
+  const renderLatexToCanvas = (expression: string, answer: string) => {
     const latex = `${expression} = ${answer}`;
     setLatexExpression([...latexExpression, latex]);
 
@@ -109,9 +227,10 @@ export default function Home() {
           dict_of_vars: dictOfVars,
         },
       });
+
       const resp = await response.data;
       resp.data.forEach((data: Response) => {
-        if (data.assign == true) {
+        if (data.assign === true) {
           setDictOfVars({
             ...dictOfVars,
             [data.expr]: data.result,
@@ -132,10 +251,11 @@ export default function Home() {
             if (x < minX) minX = x;
             if (x > maxX) maxX = x;
             if (y < minY) minY = y;
-            if (y > maxX) maxY = y;
+            if (y > maxY) maxY = y;
           }
         }
       }
+
       const centerX = (minX + maxX) / 2;
       const centerY = (minY + maxY) / 2;
 
@@ -151,88 +271,28 @@ export default function Home() {
     }
   };
 
-  const resetCanvas = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-  };
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.style.background = "black";
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.beginPath();
-        ctx.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-        setIsDrawing(true);
-      }
-    }
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.strokeStyle = color;
-        ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-        ctx.stroke();
-      }
-    }
-  };
-
   return (
     <>
-      {/* Reset button */}
-      <div className="grid grid-cols-3 gap-2">
-        <Button
-          onClick={() => setReset(true)}
-          className="z-20 bg-black text-white"
-          variant="default"
-          color="black"
-        >
-          Reset
-        </Button>
+      <Toolbar
+        onUndo={undo}
+        onRedo={redo}
+        onReset={() => setReset(true)}
+        onSend={sendData}
+        swatches={SWATCHES}
+        onColorChange={(color) => {
+          setColor(color);
+          setIsErasing(false);
+        }}
+        onBrushSizeChange={setBrushSize}
+        onToggleEraser={() => setIsErasing(!isErasing)}
+        isErasing={isErasing}
+        brushSize={brushSize}
+      />
 
-        <Group className="z-30">
-          {SWATCHES.map((swatch: string) => (
-            <ColorSwatch
-              key={swatch}
-              color={swatch}
-              onClick={() => setColor(swatch)}
-            />
-          ))}
-        </Group>
-
-        {/* calculate button */}
-        <Button
-          onClick={sendData}
-          className="z-20 bg-black text-white"
-          variant="default"
-          color="black"
-        >
-          calculate
-        </Button>
-      </div>
       <canvas
         ref={canvasRef}
         id="canvas"
-        className="absolute top-0 left-0 w-full h-full bg-black"
-        onMouseDown={startDrawing}
-        onMouseOut={stopDrawing}
-        onMouseUp={stopDrawing}
-        onMouseMove={draw}
+        className="absolute top-0 left-0 w-full h-full bg-black touch-none"
       />
 
       {latexExpression &&
@@ -243,7 +303,9 @@ export default function Home() {
             onStop={(_e, data) => setLatexPosition({ x: data.x, y: data.y })}
           >
             <div className="absolute text-white">
-              <div className="latext-content">{latex}</div>
+              <div className="latext-content text-2xl sm:text-2xl text-popover">
+                {latex}
+              </div>
             </div>
           </Draggable>
         ))}
