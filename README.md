@@ -2,6 +2,8 @@
 
 This is the frontend application for the AI Drawing Calculator and Problem Solver. It provides an interactive interface for users to draw mathematical expressions and receive solutions powered by AI.
 
+Backend: https://github.com/krmahi/AI-Drawing-Calculator-and-Problem-Solver-Backend
+
 ## 🌐 Live Demo
 
 Access the live application here: [drawing-calc.vercel.app](https://drawing-calc.vercel.app)
