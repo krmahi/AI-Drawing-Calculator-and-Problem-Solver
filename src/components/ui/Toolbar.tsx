@@ -64,12 +64,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </Button>
       </Tooltip>
 
-      <Group gap={4} className="ml-2 flex-wrap">
+      <Group gap={10} className="ml-2 flex-wrap">
         {swatches.map((color) => (
           <ColorSwatch
             key={color}
             color={color}
-            size={20}
+            size={23}
             onClick={() => onColorChange(color)}
             style={{ cursor: "pointer" }}
           />
