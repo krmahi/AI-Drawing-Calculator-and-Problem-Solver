@@ -31,31 +31,52 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   return (
     <div className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50 bg-zinc-900 p-3 rounded-2xl shadow-md flex flex-wrap justify-center items-center gap-2 w-[95%] sm:w-auto">
       <Tooltip label="Undo">
-        <Button variant="ghost" size="lg" onClick={onUndo}>
+        <Button
+          className="hover:bg-zinc-800"
+          variant="ghost"
+          size="lg"
+          onClick={onUndo}
+        >
           <Undo2 size={24} className="text-white" />
         </Button>
       </Tooltip>
 
       <Tooltip label="Redo">
-        <Button variant="ghost" size="lg" onClick={onRedo}>
+        <Button
+          className="hover:bg-zinc-800"
+          variant="ghost"
+          size="lg"
+          onClick={onRedo}
+        >
           <Redo2 size={24} className="text-white" />
         </Button>
       </Tooltip>
 
       <Tooltip label="Reset">
-        <Button variant="ghost" size="lg" onClick={onReset}>
+        <Button
+          className="hover:bg-zinc-800"
+          variant="ghost"
+          size="lg"
+          onClick={onReset}
+        >
           <RefreshCcw size={24} className="text-white" />
         </Button>
       </Tooltip>
 
       <Tooltip label="Calculate">
-        <Button variant="ghost" size="lg" onClick={onSend}>
+        <Button
+          className="hover:bg-zinc-800"
+          variant="ghost"
+          size="lg"
+          onClick={onSend}
+        >
           <Calculator size={24} className="text-white" />
         </Button>
       </Tooltip>
 
       <Tooltip label={isErasing ? "Eraser On" : "Eraser Off"}>
         <Button
+          className="hover:bg-zinc-800"
           variant={isErasing ? "default" : "ghost"}
           size="lg"
           onClick={onToggleEraser}
