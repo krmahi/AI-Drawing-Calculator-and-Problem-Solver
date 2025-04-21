@@ -287,6 +287,7 @@ export default function Home() {
         onToggleEraser={() => setIsErasing(!isErasing)}
         isErasing={isErasing}
         brushSize={brushSize}
+        color={color}
       />
 
       <canvas

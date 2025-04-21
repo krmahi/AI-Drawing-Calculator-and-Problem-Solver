@@ -14,6 +14,7 @@ interface ToolbarProps {
   isErasing: boolean;
   swatches: string[];
   brushSize: number;
+  color: string;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -27,6 +28,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isErasing,
   swatches,
   brushSize,
+  color,
 }) => {
   return (
     <div className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50 bg-zinc-900 p-3 rounded-2xl shadow-md flex flex-wrap justify-center items-center gap-2 w-[95%] sm:w-auto">
@@ -106,6 +108,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           className="w-28 ml-2"
         />
       </Tooltip>
+      <div className="ml-2 flex items-center gap-2">
+        <span className="text-xm text-white">Brush:</span>
+        <div
+          className="rounded-full border border-white"
+          style={{
+            width: brushSize * 2,
+            height: brushSize * 2,
+            backgroundColor: isErasing ? "black" : color,
+            boxShadow: "0 0 4px {rgba(255,255,255,0.5)}",
+            border: "None",
+          }}
+        />
+      </div>
     </div>
   );
 };
