@@ -256,10 +256,19 @@ export default function Home() {
         }
       }
 
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
+      // const centerX = (minX + maxX) / 6;
+      // const centerY = (minY + maxY) / 2.6;
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
 
-      setLatexPosition({ x: centerX, y: centerY });
+      // const latexBoxWidth = 250;
+      // const latexBoxHeight = 100;
+
+      const safeX = Math.min((minX + maxX) / 9.5, canvasWidth);
+      const safeY = Math.min((minY + maxY) / 2, canvasHeight);
+
+      setLatexPosition({ x: safeX, y: safeY });
+      // setLatexPosition({ x: centerX, y: centerY });
       resp.data.forEach((data: Response) => {
         setTimeout(() => {
           setResult({
@@ -293,7 +302,10 @@ export default function Home() {
       <canvas
         ref={canvasRef}
         id="canvas"
-        className="absolute top-0 left-0 w-full h-full bg-black touch-none"
+        className="absolute top-0 left-0 w-fill h-fill bg-black z-0 touch-none"
+        style={{
+          overflow: "hidden",
+        }}
       />
 
       {latexExpression &&
@@ -303,8 +315,19 @@ export default function Home() {
             defaultPosition={latexPosition}
             onStop={(_e, data) => setLatexPosition({ x: data.x, y: data.y })}
           >
-            <div className="absolute text-white">
-              <div className="latext-content text-2xl sm:text-2xl text-popover">
+            <div className="absolute text-wrap">
+              <div
+                className="latext-content text-white p-2 text-base sm:text-xl rounded"
+                style={{
+                  maxWidth: "calc(100vw - 32px)", // prevents going off-screen
+                  maxHeight: "40vh",
+                  overflowWrap: "break-word",
+                  wordBreak: "break-word",
+                  whiteSpace: "pre-wrap",
+                  overflowX: "hidden",
+                  overflowY: "hidden",
+                }}
+              >
                 {latex}
               </div>
             </div>
